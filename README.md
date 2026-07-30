@@ -33,23 +33,25 @@ Necesitas **Docker** (con Compose v2), **make** y **git**.
 git clone https://github.com/acardielf/geducand-imapsync.git
 cd geducand-imapsync
 make install
-nano .env
 make test
 make up
 ```
 
-1. `make install` crea `.env` y **te pide las dos contraseñas por pantalla**, que
-   guarda en sus ficheros con permisos `600`. No se muestran al teclearlas.
-2. En `.env` sólo hace falta poner `SOURCE_USER` y `DEST_USER`; el resto de valores
-   traen defaults razonables.
-3. `make test` ejecuta un ciclo en simulación: no toca ningún buzón.
-4. `make up` arranca en segundo plano.
+1. `make install` te pregunta por pantalla las **dos direcciones de correo** y las
+   **dos contraseñas**, y lo deja todo escrito: las cuentas en `.env` y las
+   contraseñas en sus ficheros con permisos `600`. Al terminar te dice si ya puedes
+   arrancar o qué falta.
+2. `make test` ejecuta un ciclo en simulación: no toca ningún buzón.
+3. `make up` arranca en segundo plano.
+
+No hace falta editar ningún fichero a mano: con esos tres comandos queda configurado
+y funcionando. El resto de opciones traen defaults razonables y sólo se tocan si
+quieres cambiar el comportamiento (ver [Configuración](#-configuración)).
 
 🔑 La contraseña de Google **no** es la normal de la cuenta, sino una App Password de
 16 caracteres: cómo obtenerla está en
 [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand). Si aún no la
-tienes, pulsa Enter en el prompt y rellénala más tarde volviendo a lanzar
-`make install`.
+tienes, pulsa Enter en ese prompt y relanza `make install` cuando la tengas.
 
 A partir de ahí, `make logs` para ver qué está haciendo y `make down` para pararlo.
 
@@ -98,7 +100,8 @@ Debian.
 ## 🔧 Configuración
 
 Todo se configura por **variables de entorno**, con valores por defecto recomendados
-en `sync.sh`. `make install` copia la plantilla por ti; a mano sería:
+en `sync.sh`. `make install` crea `.env` a partir de la plantilla y rellena por ti las
+dos variables obligatorias; a mano sería:
 
 ```bash
 cp .env.example .env
@@ -109,7 +112,9 @@ variable.
 
 ### Obligatorias
 
-Sin estas dos el contenedor se detiene al arrancar con un mensaje explícito:
+`make install` las pide por pantalla y las escribe en `.env`, conservando el orden y
+los comentarios del fichero. Sin ellas, tanto `make up` como el propio contenedor se
+detienen con un mensaje explícito:
 
 | Variable | Descripción |
 |---|---|
@@ -136,6 +141,7 @@ Sin estas dos el contenedor se detiene al arrancar con un mensaje explícito:
 | `MAX_AGE` | `7` | Sólo correo de los últimos N días |
 | `SLEEP_INTERVAL` | `600` | Segundos entre ciclos (mínimo 60) |
 | `DELETE_SOURCE` | `true` | `true` mueve (borra en origen); `false` copia |
+| `ADD_HEADER` | `true` | Genera `Message-Id` en los mensajes que no la traen, para que no se queden sin sincronizar |
 | `DRY_RUN` | `false` | `true` simula sin escribir ni borrar nada |
 | `SPAM_SUBJECT` | `Publicidad` | Asunto que se desvía a `SPAM_FOLDER`; **vacío desactiva la segunda pasada** |
 | `SPAM_FOLDER` | `[Gmail]/Spam` | Carpeta destino de la publicidad |
@@ -198,15 +204,20 @@ la opción no aparecerá aunque actives la verificación en dos pasos en tu cuen
 La gestión se hace con `make`. Ejecuta `make` sin argumentos para ver la lista
 completa de comandos.
 
-`make install` se puede relanzar sin miedo: no toca `.env` si ya existe, y pregunta
-antes de sobrescribir una contraseña ya guardada.
+`make install` se puede relanzar sin miedo: muestra entre corchetes el valor actual de
+cada cuenta y Enter lo mantiene, y pregunta antes de sobrescribir una contraseña ya
+guardada. Sirve tanto para la primera puesta en marcha como para cambiar sólo un dato
+más adelante.
+
+Al terminar resume el estado: si algo falta lo enumera, y si está todo listo indica
+que ya puedes lanzar `make test` y `make up`.
 
 ### Comandos
 
 | Comando | Qué hace |
 |---|---|
 | `make help` | Lista los comandos disponibles (opción por defecto) |
-| `make install` | Crea `.env` y pide las contraseñas por pantalla |
+| `make install` | Configura cuentas y contraseñas de forma interactiva |
 | `make up` | Construye y levanta el contenedor en segundo plano |
 | `make down` | Para y elimina el contenedor |
 | `make restart` | Reinicia el contenedor |
@@ -218,8 +229,9 @@ antes de sobrescribir una contraseña ya guardada.
 | `make shell` | Abre una shell dentro del contenedor |
 | `make clean` | Borra contenedor, imagen y logs (pide confirmación) |
 
-`make up`, `make test` y `make sync-once` comprueban antes que exista `.env` y que
-los ficheros de contraseña no estén vacíos, y fallan con un mensaje claro si no.
+`make up`, `make test` y `make sync-once` comprueban antes que `SOURCE_USER` y
+`DEST_USER` estén configurados y que los ficheros de contraseña no estén vacíos, y
+fallan con un mensaje claro si no.
 
 ### `make test`
 

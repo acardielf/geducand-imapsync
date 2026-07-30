@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnet-server-perl \
     make \
     time \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Descarga imapsync oficial (no desde apt, sino el binario del autor)

@@ -28,6 +28,12 @@ SYNC_FOLDER="${SYNC_FOLDER:-INBOX}"
 MAX_AGE="${MAX_AGE:-7}"
 SLEEP_INTERVAL="${SLEEP_INTERVAL:-600}"
 
+# Los mensajes se identifican por Message-Id. Los que no la traen se ignoran
+# y, como nunca se transfieren, --delete1 tampoco los borra: se quedarian en
+# origen para siempre. ADD_HEADER hace que imapsync les genere una Message-Id
+# sintetica a partir del UID de origen.
+ADD_HEADER="${ADD_HEADER:-true}"
+
 # DELETE_SOURCE=true borra en origen lo ya transferido (mover, no copiar).
 # DRY_RUN=true simula sin escribir nada: recomendable en la primera puesta
 # en marcha para comprobar el filtrado antes de tocar el buzon real.
@@ -76,20 +82,20 @@ check_config() {
 
     if (( ${#faltan[@]} > 0 )); then
         log "ERROR: faltan variables obligatorias: ${faltan[*]}"
-        log "Definelas en .env (ver .env.example)."
+        log "Defínelas en .env (ver .env.example)."
         exit 1
     fi
 
     local fichero
     for fichero in "$SOURCE_PASSFILE" "$DEST_PASSFILE"; do
         if [[ ! -r "$fichero" ]]; then
-            log "ERROR: no se puede leer el fichero de contrasena: $fichero"
-            log "Comprueba la seccion 'secrets' de docker-compose.yml."
+            log "ERROR: no se puede leer el fichero de contraseña: $fichero"
+            log "Comprueba la sección 'secrets' de docker-compose.yml."
             exit 1
         fi
         if [[ ! -s "$fichero" ]]; then
-            log "ERROR: el fichero de contrasena esta vacio: $fichero"
-            log "Rellenalo con la contrasena (ver 'make install')."
+            log "ERROR: el fichero de contraseña está vacío: $fichero"
+            log "Rellénalo ejecutando 'make install'."
             exit 1
         fi
     done
@@ -131,7 +137,7 @@ rotate_log() {
     rm -f "$LOG_FILE.$((LOG_KEEP + 1)).gz"
 
     : > "$LOG_FILE"
-    log "Rotacion completada (se conservan $LOG_KEEP ficheros comprimidos)"
+    log "Rotación completada (se conservan $LOG_KEEP ficheros comprimidos)"
 }
 
 check_config
@@ -166,6 +172,10 @@ if [[ "$DEST_IS_GMAIL" == "true" ]]; then
     COMMON_ARGS+=(--gmail2)
 fi
 
+if [[ "$ADD_HEADER" == "true" ]]; then
+    COMMON_ARGS+=(--addheader)
+fi
+
 if [[ "$DELETE_SOURCE" == "true" ]]; then
     COMMON_ARGS+=(--delete1)
 fi
@@ -196,7 +206,7 @@ run_pass() {
             ;;
         124|137)
             PASS_STATUS="TIMEOUT (${PASS_TIMEOUT}s)"
-            log "$etiqueta abortada: supero ${PASS_TIMEOUT}s sin terminar"
+            log "$etiqueta abortada: superó ${PASS_TIMEOUT}s sin terminar"
             ;;
         *)
             PASS_STATUS="WARN (exit $rc)"
@@ -204,13 +214,13 @@ run_pass() {
     esac
 }
 
-log "=== Iniciando bucle de sincronizacion ==="
+log "=== Iniciando bucle de sincronización ==="
 log "Origen:  $SOURCE_USER en $SOURCE_HOST:$SOURCE_PORT (carpeta $SYNC_FOLDER)"
 log "Destino: $DEST_USER en $DEST_HOST:$DEST_PORT"
-log "Intervalo: ${SLEEP_INTERVAL}s | Antiguedad maxima: ${MAX_AGE}d | Borrar origen: $DELETE_SOURCE"
+log "Intervalo: ${SLEEP_INTERVAL}s | Antigüedad máxima: ${MAX_AGE}d | Borrar origen: $DELETE_SOURCE"
 
 if [[ "$DRY_RUN" == "true" ]]; then
-    log "MODO SIMULACION (DRY_RUN=true): no se escribira ni se borrara nada"
+    log "MODO SIMULACIÓN (DRY_RUN=true): no se escribirá ni se borrará nada"
 fi
 
 while true; do
@@ -229,19 +239,21 @@ while true; do
 
     if [[ -n "$SPAM_SUBJECT" ]]; then
         log "Pasada 2: $SPAM_SUBJECT → $SPAM_FOLDER..."
+        # --f1f2 toma un unico argumento con la forma origen=destino. Pasarlo
+        # como dos argumentos hace que imapsync salga con 64 (EX_USAGE).
         run_pass "Pasada 2" \
             --search "SUBJECT \"$SPAM_SUBJECT\"" \
-            --f1f2   "$SYNC_FOLDER" "$SPAM_FOLDER"
+            --f1f2   "$SYNC_FOLDER=$SPAM_FOLDER"
         STATUS2="$PASS_STATUS"
     else
-        STATUS2="omitida (SPAM_SUBJECT vacio)"
+        STATUS2="omitida (SPAM_SUBJECT vacío)"
     fi
 
     END=$(date +%s)
     log "Ciclo completado en $((END - START))s — Normal: $STATUS1 | Publicidad: $STATUS2"
 
     if [[ "$RUN_ONCE" == "true" ]]; then
-        log "RUN_ONCE=true: fin tras un unico ciclo"
+        log "RUN_ONCE=true: fin tras un único ciclo"
         break
     fi
 
