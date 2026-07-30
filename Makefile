@@ -14,11 +14,13 @@ SECRETS := password_corporativo_junta password_geducaand
 
 # Valores de .env.example que son marcadores, no configuración real: si una
 # variable tiene uno de estos, se pide igualmente.
-PLACEHOLDERS := usuario@juntadeandalucia.es usuario@g.educaand.es
+PLACEHOLDERS := nombre.apellido.edu@juntadeandalucia.es usuario_idea@g.educaand.es
 
 # Pide una dirección de correo y la escribe en .env conservando el orden y los
 # comentarios del fichero. Enter mantiene el valor actual si ya es válido.
-#   $(1) = variable de .env    $(2) = descripción para el prompt
+# El ejemplo solo se muestra cuando no hay valor previo: cuando lo hay, se
+# enseña ese entre corchetes y así el prompt no se hace interminable.
+#   $(1) = variable de .env    $(2) = etiqueta    $(3) = dirección de ejemplo
 define pedir_usuario
 	@actual=$$(grep -E "^$(1)=" .env 2>/dev/null | head -1 | cut -d= -f2-); \
 	for ph in $(PLACEHOLDERS); do \
@@ -33,7 +35,7 @@ define pedir_usuario
 			read -rp "  $(2) [$$actual]: " valor; \
 			if [ -z "$$valor" ]; then valor="$$actual"; fi; \
 		else \
-			read -rp "  $(2): " valor; \
+			read -rp "  $(2) (ej: $(3)): " valor; \
 		fi; \
 		if [ -z "$$valor" ]; then \
 			echo "    sin valor: tendrás que ponerlo en .env antes de arrancar"; \
@@ -95,11 +97,11 @@ install: ## Configura .env y las contraseñas de forma interactiva
 	fi
 	@echo ""
 	@echo "Cuentas de correo:"
-	$(call pedir_usuario,SOURCE_USER,Dirección del buzón de origen (Junta))
-	$(call pedir_usuario,DEST_USER,Dirección del buzón de destino (g.educaand.es))
+	$(call pedir_usuario,SOURCE_USER,Buzón de origen — Junta de Andalucía,nombre.apellido.edu@juntadeandalucia.es)
+	$(call pedir_usuario,DEST_USER,Buzón de destino — Google,usuario_idea@g.educaand.es)
 	@echo ""
 	@echo "Contraseñas (no se muestran al escribirlas; Enter las deja para más tarde):"
-	$(call pedir_secreto,password_corporativo_junta,buzón corporativo de la Junta)
+	$(call pedir_secreto,password_corporativo_junta,buzón corporativo de la Junta de Andalucía)
 	$(call pedir_secreto,password_geducaand,App Password de Google para g.educaand.es)
 	@echo ""
 	@echo "Los ficheros de contraseña están en .gitignore: nunca se suben al repositorio."

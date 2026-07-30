@@ -4,6 +4,17 @@ Sincronización periódica y unidireccional de correo IMAP desde el buzón corpo
 de la Junta de Andalucía hacia una cuenta de Gmail de `g.educaand.es`, ejecutada en
 un contenedor Docker que corre de forma continua.
 
+**Para qué sirve.** El buzón corporativo `@juntadeandalucia.es` tiene muy poca
+capacidad y se llena con rapidez, lo que obliga a estar vaciándolo a mano para no
+quedarse sin recibir correo. Este proyecto va moviendo automáticamente los mensajes
+al buzón de `@g.educaand.es`, que tiene mucho más espacio: el corporativo se mantiene
+despejado y el correo queda archivado y accesible en Google.
+
+Así puedes **seguir dando tu dirección corporativa** como dirección de contacto —que
+es la que corresponde institucionalmente— en lugar de la de Google, sin preocuparte
+por la capacidad del buzón. La dirección que das a los demás no cambia; sólo cambia
+dónde acaba guardado el correo.
+
 ## 📑 Índice
 
 - 🚀 [Inicio rápido](#-inicio-rápido)
