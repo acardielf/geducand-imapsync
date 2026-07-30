@@ -22,8 +22,9 @@ Características del sincronizado (definidas en `sync.sh`):
 - Deduplicación por cabecera `Message-Id`.
 - Sólo se procesa la carpeta `INBOX`; el resto se ignora.
 
-> ⚠️ `--delete1` es destructivo sobre el buzón de origen. Conviene probar primero
-> añadiendo `--dry` a `COMMON_ARGS` antes de dejarlo en marcha.
+> ⚠️ `--delete1` es destructivo sobre el buzón de origen. Antes de dejarlo en marcha,
+> comprueba el comportamiento con `make test`, que ejecuta un ciclo en simulación
+> sin escribir ni borrar nada. Con `DELETE_SOURCE=false` se copia en vez de mover.
 
 ## Estructura
 
@@ -132,9 +133,9 @@ la verificación en dos pasos (2FA)** en la cuenta `usuario@g.educaand.es`.
 4. Copia los 16 caracteres que genera Google y guárdalos en `password_geducaand`,
    sin espacios y sin salto de línea final.
 
-Si el dominio `g.educaand.es` está gestionado por Google Workspace, el administrador
-debe permitir tanto la 2FA como las App Passwords; en caso contrario la opción no
-estará disponible aunque la 2FA esté activa.
+`g.educaand.es` está gestionado por Google Workspace, así que el administrador del
+dominio debe tener habilitadas tanto la 2FA como las App Passwords. Si no lo están,
+la opción no aparecerá aunque actives la verificación en dos pasos en tu cuenta.
 
 Ambos ficheros están excluidos en `.gitignore`, así que no se suben al repositorio.
 
