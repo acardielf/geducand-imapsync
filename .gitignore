@@ -1,0 +1,22 @@
+# Credenciales y configuración local
+.env
+*.local
+secrets/
+credentials*
+*.pem
+*.key
+
+# Logs y estado de imapsync
+*.log
+logs/
+LOG_imapsync/
+.imapsync/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.idea/
+.vscode/
+*.swp
