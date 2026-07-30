@@ -8,8 +8,13 @@ services:
     secrets:
       - password_corporativo_junta
       - password_geducaand
+    env_file:
+      # Opcional: sin .env el script usa sus valores por defecto y avisa
+      # de las variables obligatorias que falten.
+      - path: .env
+        required: false
     environment:
-      - TZ=Europe/Madrid
+      - TZ=${TZ:-Europe/Madrid}
 
 secrets:
   password_corporativo_junta:
