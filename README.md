@@ -4,6 +4,59 @@ Sincronización periódica y unidireccional de correo IMAP desde el buzón corpo
 de la Junta de Andalucía hacia una cuenta de Gmail de `g.educaand.es`, ejecutada en
 un contenedor Docker que corre de forma continua.
 
+## Índice
+
+- [Inicio rápido](#inicio-rápido)
+- [Qué hace](#qué-hace)
+- [Estructura](#estructura)
+- [Configuración](#configuración)
+  - [Obligatorias](#obligatorias)
+  - [Conexión](#conexión)
+  - [Sincronización](#sincronización)
+  - [Logs y tolerancia a fallos](#logs-y-tolerancia-a-fallos)
+- [Secretos](#secretos)
+  - [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand)
+- [Uso](#uso)
+  - [Comandos](#comandos)
+  - [`make test`](#make-test)
+  - [Sin `make`](#sin-make)
+- [Logs](#logs)
+  - [Rotación](#rotación)
+- [Tolerancia a fallos](#tolerancia-a-fallos)
+- [Pendiente](#pendiente)
+
+## Inicio rápido
+
+Necesitas **Docker** (con Compose v2), **make** y **git**. Cinco pasos:
+
+```bash
+git clone https://github.com/acardielf/geducand-imapsync.git   # 1. Clonar
+cd geducand-imapsync
+
+make install                    # 2. Crea .env y los ficheros de contraseña
+$EDITOR .env                    # 3. Pon tu SOURCE_USER y tu DEST_USER
+make test                       # 4. Prueba en simulación: no toca ningún buzón
+make up                         # 5. Arranca en segundo plano
+```
+
+En el paso 3, además de editar `.env`, escribe las dos contraseñas:
+
+```bash
+printf '%s' 'CONTRASEÑA_JUNTA' > password_corporativo_junta
+printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
+```
+
+La segunda **no** es la contraseña normal de Google, sino una App Password de 16
+caracteres: cómo obtenerla está en [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand).
+
+A partir de ahí, `make logs` para ver qué está haciendo y `make down` para pararlo.
+El resto de valores traen defaults razonables, así que sólo hace falta tocarlos si
+quieres cambiar el comportamiento.
+
+> ⚠️ Por defecto la sincronización **mueve** el correo: borra en origen lo que ya ha
+> transferido. Ejecuta siempre `make test` antes de `make up` para ver qué haría, y
+> usa `DELETE_SOURCE=false` si prefieres copiar en vez de mover.
+
 ## Qué hace
 
 Un contenedor Debian con [imapsync](https://imapsync.lamiral.info/) ejecuta un bucle
@@ -14,17 +67,17 @@ infinito que, cada 10 minutos, realiza **dos pasadas** sobre el `INBOX` de orige
 | 1 — Correo normal | `NOT SUBJECT "Publicidad"` | `INBOX` de Gmail |
 | 2 — Publicidad | `SUBJECT "Publicidad"` | `[Gmail]/Spam` |
 
-Características del sincronizado (definidas en `sync.sh`):
+Características del sincronizado (con los valores por defecto de `sync.sh`):
 
-- **Sólo los últimos 7 días** (`--maxage 7`).
-- **Movimiento, no copia**: `--delete1` borra en origen los mensajes ya transferidos.
-- **Modo Gmail** (`--gmail2`) y conservación de fechas internas (`--syncinternaldates`).
+- **Sólo los últimos 7 días** (`MAX_AGE`).
+- **Movimiento, no copia**: `DELETE_SOURCE=true` borra en origen los mensajes ya
+  transferidos.
+- **Modo Gmail** (`DEST_IS_GMAIL`) y conservación de fechas internas.
 - Deduplicación por cabecera `Message-Id`.
 - Sólo se procesa la carpeta `INBOX`; el resto se ignora.
 
-> ⚠️ `--delete1` es destructivo sobre el buzón de origen. Antes de dejarlo en marcha,
-> comprueba el comportamiento con `make test`, que ejecuta un ciclo en simulación
-> sin escribir ni borrar nada. Con `DELETE_SOURCE=false` se copia en vez de mover.
+Tanto el intervalo como los filtros y las carpetas son configurables: ver
+[Configuración](#configuración).
 
 ## Estructura
 
@@ -45,7 +98,7 @@ Debian.
 ## Configuración
 
 Todo se configura por **variables de entorno**, con valores por defecto recomendados
-en `sync.sh`. Copia la plantilla y ajusta lo que necesites:
+en `sync.sh`. `make install` copia la plantilla por ti; a mano sería:
 
 ```bash
 cp .env.example .env
@@ -98,21 +151,17 @@ Sin estas dos el contenedor se detiene al arrancar con un mensaje explícito:
 | `PASS_KILL_AFTER` | `30` | Margen antes del `SIGKILL` |
 | `TZ` | `Europe/Madrid` | Zona horaria del contenedor |
 
-> 💡 Para la primera puesta en marcha, arranca con `DRY_RUN=true` y revisa el log:
-> comprobarás qué mensajes se moverían y cómo funciona el filtrado de publicidad
-> antes de tocar el buzón real.
+## Secretos
 
-Las contraseñas se pasan como *Docker secrets* y se leen desde
+Las contraseñas no van en `.env`: se pasan como *Docker secrets* y se leen desde
 `/run/secrets/password_corporativo_junta` y `/run/secrets/password_geducaand`.
-
-### Secretos
 
 `make install` crea ambos ficheros vacíos con permisos `600`; sólo hay que escribir
 la contraseña dentro, sin salto de línea final:
 
 ```bash
 printf '%s' 'CONTRASEÑA_JUNTA' > password_corporativo_junta
-printf '%s' 'APP_PASSWORD_GEDUCAAND' > password_geducaand
+printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
 ```
 
 | Fichero | Contenido |
@@ -120,7 +169,9 @@ printf '%s' 'APP_PASSWORD_GEDUCAAND' > password_geducaand
 | `password_corporativo_junta` | Contraseña del buzón corporativo `@juntadeandalucia.es` |
 | `password_geducaand` | App Password de la cuenta `@g.educaand.es` (**no** la contraseña normal) |
 
-#### Cómo generar `password_geducaand`
+Ambos ficheros están excluidos en `.gitignore`, así que no se suben al repositorio.
+
+### Cómo generar `password_geducaand`
 
 La cuenta de Gmail **no** acepta la contraseña habitual por IMAP: hay que crear una
 *App Password*, y para que Google ofrezca esa opción es **imprescindible tener activada
@@ -137,21 +188,10 @@ la verificación en dos pasos (2FA)** en la cuenta `usuario@g.educaand.es`.
 dominio debe tener habilitadas tanto la 2FA como las App Passwords. Si no lo están,
 la opción no aparecerá aunque actives la verificación en dos pasos en tu cuenta.
 
-Ambos ficheros están excluidos en `.gitignore`, así que no se suben al repositorio.
-
 ## Uso
 
 La gestión se hace con `make`. Ejecuta `make` sin argumentos para ver la lista
 completa de comandos.
-
-### Puesta en marcha
-
-```bash
-make install   # 1. Crea .env y los ficheros de contraseña (vacíos, permisos 600)
-               # 2. Edita .env y escribe las contraseñas en los dos ficheros
-make test      # 3. Prueba en simulación: no escribe ni borra nada
-make up        # 4. Arranca en segundo plano
-```
 
 `make install` es idempotente: si `.env` o los ficheros de contraseña ya existen,
 los deja intactos.
@@ -215,11 +255,6 @@ Al inicio de cada ciclo se comprueba el tamaño del log activo. Si supera
 los comprimidos anteriores se desplazan un número, y se empieza un log nuevo.
 Se conservan `LOG_KEEP` ficheros comprimidos (3 por defecto); el más antiguo
 se descarta.
-
-| Variable | Por defecto | Efecto |
-|---|---|---|
-| `LOG_MAX_BYTES` | `100 * 1024 * 1024` | Tamaño a partir del cual se rota |
-| `LOG_KEEP` | `3` | Comprimidos que se conservan |
 
 El consumo máximo en disco es por tanto ~100 MB del log activo más los 3 comprimidos,
 que al ser texto muy repetitivo bajan a una fracción de su tamaño original.
