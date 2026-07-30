@@ -4,60 +4,63 @@ Sincronización periódica y unidireccional de correo IMAP desde el buzón corpo
 de la Junta de Andalucía hacia una cuenta de Gmail de `g.educaand.es`, ejecutada en
 un contenedor Docker que corre de forma continua.
 
-## Índice
+## 📑 Índice
 
-- [Inicio rápido](#inicio-rápido)
-- [Qué hace](#qué-hace)
-- [Estructura](#estructura)
-- [Configuración](#configuración)
+- 🚀 [Inicio rápido](#-inicio-rápido)
+- 📬 [Qué hace](#-qué-hace)
+- 📂 [Estructura](#-estructura)
+- 🔧 [Configuración](#-configuración)
   - [Obligatorias](#obligatorias)
   - [Conexión](#conexión)
   - [Sincronización](#sincronización)
   - [Logs y tolerancia a fallos](#logs-y-tolerancia-a-fallos)
-- [Secretos](#secretos)
+- 🔐 [Secretos](#-secretos)
   - [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand)
-- [Uso](#uso)
+- 🧰 [Uso](#-uso)
   - [Comandos](#comandos)
   - [`make test`](#make-test)
   - [Sin `make`](#sin-make)
-- [Logs](#logs)
+- 📄 [Logs](#-logs)
   - [Rotación](#rotación)
-- [Tolerancia a fallos](#tolerancia-a-fallos)
-- [Pendiente](#pendiente)
+- 🚨 [Tolerancia a fallos](#-tolerancia-a-fallos)
+- 📌 [Pendiente](#-pendiente)
 
-## Inicio rápido
+## 🚀 Inicio rápido
 
-Necesitas **Docker** (con Compose v2), **make** y **git**. Cinco pasos:
+Necesitas **Docker** (con Compose v2), **make** y **git**.
 
 ```bash
-git clone https://github.com/acardielf/geducand-imapsync.git   # 1. Clonar
+git clone https://github.com/acardielf/geducand-imapsync.git
 cd geducand-imapsync
-
-make install                    # 2. Crea .env y los ficheros de contraseña
-$EDITOR .env                    # 3. Pon tu SOURCE_USER y tu DEST_USER
-make test                       # 4. Prueba en simulación: no toca ningún buzón
-make up                         # 5. Arranca en segundo plano
+make install
+nano .env
+make test
+make up
 ```
 
-En el paso 3, además de editar `.env`, escribe las dos contraseñas:
+1. `make install` crea `.env` y los dos ficheros de contraseña.
+2. En `.env` sólo hace falta poner `SOURCE_USER` y `DEST_USER`; el resto de valores
+   traen defaults razonables.
+3. `make test` ejecuta un ciclo en simulación: no toca ningún buzón.
+4. `make up` arranca en segundo plano.
+
+Además de editar `.env`, escribe las dos contraseñas:
 
 ```bash
 printf '%s' 'CONTRASEÑA_JUNTA' > password_corporativo_junta
 printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
 ```
 
-La segunda **no** es la contraseña normal de Google, sino una App Password de 16
+🔑 La segunda **no** es la contraseña normal de Google, sino una App Password de 16
 caracteres: cómo obtenerla está en [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand).
 
 A partir de ahí, `make logs` para ver qué está haciendo y `make down` para pararlo.
-El resto de valores traen defaults razonables, así que sólo hace falta tocarlos si
-quieres cambiar el comportamiento.
 
 > ⚠️ Por defecto la sincronización **mueve** el correo: borra en origen lo que ya ha
 > transferido. Ejecuta siempre `make test` antes de `make up` para ver qué haría, y
 > usa `DELETE_SOURCE=false` si prefieres copiar en vez de mover.
 
-## Qué hace
+## 📬 Qué hace
 
 Un contenedor Debian con [imapsync](https://imapsync.lamiral.info/) ejecuta un bucle
 infinito que, cada 10 minutos, realiza **dos pasadas** sobre el `INBOX` de origen:
@@ -77,9 +80,9 @@ Características del sincronizado (con los valores por defecto de `sync.sh`):
 - Sólo se procesa la carpeta `INBOX`; el resto se ignora.
 
 Tanto el intervalo como los filtros y las carpetas son configurables: ver
-[Configuración](#configuración).
+[Configuración](#-configuración).
 
-## Estructura
+## 📂 Estructura
 
 ```
 .
@@ -95,7 +98,7 @@ La imagen no instala imapsync desde `apt`, sino que descarga el script original 
 autor en `/usr/local/bin/imapsync`; las dependencias Perl sí vienen de los paquetes
 Debian.
 
-## Configuración
+## 🔧 Configuración
 
 Todo se configura por **variables de entorno**, con valores por defecto recomendados
 en `sync.sh`. `make install` copia la plantilla por ti; a mano sería:
@@ -151,7 +154,7 @@ Sin estas dos el contenedor se detiene al arrancar con un mensaje explícito:
 | `PASS_KILL_AFTER` | `30` | Margen antes del `SIGKILL` |
 | `TZ` | `Europe/Madrid` | Zona horaria del contenedor |
 
-## Secretos
+## 🔐 Secretos
 
 Las contraseñas no van en `.env`: se pasan como *Docker secrets* y se leen desde
 `/run/secrets/password_corporativo_junta` y `/run/secrets/password_geducaand`.
@@ -169,7 +172,7 @@ printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
 | `password_corporativo_junta` | Contraseña del buzón corporativo `@juntadeandalucia.es` |
 | `password_geducaand` | App Password de la cuenta `@g.educaand.es` (**no** la contraseña normal) |
 
-Ambos ficheros están excluidos en `.gitignore`, así que no se suben al repositorio.
+> 🔒 Ambos ficheros están excluidos en `.gitignore`, así que no se suben al repositorio.
 
 ### Cómo generar `password_geducaand`
 
@@ -188,7 +191,7 @@ la verificación en dos pasos (2FA)** en la cuenta `usuario@g.educaand.es`.
 dominio debe tener habilitadas tanto la 2FA como las App Passwords. Si no lo están,
 la opción no aparecerá aunque actives la verificación en dos pasos en tu cuenta.
 
-## Uso
+## 🧰 Uso
 
 La gestión se hace con `make`. Ejecuta `make` sin argumentos para ver la lista
 completa de comandos.
@@ -238,7 +241,7 @@ docker compose down            # Parar
 El servicio está configurado con `restart: always`, por lo que vuelve a levantarse
 tras un reinicio del host.
 
-## Logs
+## 📄 Logs
 
 Se escriben en `./logs/` (montado sobre `/var/log/imapsync`), en un fichero mensual
 `sync-AAAA-MM.log`. Contiene tanto las marcas de inicio/fin de ciclo del script como
@@ -265,7 +268,7 @@ Además se pasa `--nolog` a imapsync para que no genere su propio directorio
 
 La zona horaria del contenedor es `Europe/Madrid`.
 
-## Tolerancia a fallos
+## 🚨 Tolerancia a fallos
 
 Cada pasada se ejecuta bajo `timeout`, con un tope de `PASS_TIMEOUT` segundos
 (480 por defecto) y `SIGKILL` 30 segundos después si no atiende al `SIGTERM`.
@@ -279,14 +282,14 @@ Estados posibles de cada pasada:
 
 | Estado | Significado |
 |---|---|
-| `OK` | La pasada terminó correctamente |
-| `WARN (exit N)` | imapsync terminó con error; el código `N` queda en el log |
-| `TIMEOUT (480s)` | La pasada se abortó por exceder el tope |
+| ✅ `OK` | La pasada terminó correctamente |
+| ⚠️ `WARN (exit N)` | imapsync terminó con error; el código `N` queda en el log |
+| ⏱️ `TIMEOUT (480s)` | La pasada se abortó por exceder el tope |
 
 Como las pasadas son secuenciales, en el peor caso un ciclo tarda
 `2 × PASS_TIMEOUT + SLEEP_INTERVAL`. No hay riesgo de solapamiento.
 
-## Pendiente
+## 📌 Pendiente
 
 - No hay reintento ni alerta externa si una pasada falla: el estado sólo queda
   registrado en el log.
