@@ -2,12 +2,40 @@
 #
 # Ejecuta 'make' o 'make help' para ver los comandos disponibles.
 
+# bash, no sh: 'read -s' (entrada sin eco) es una extension de bash.
+SHELL := /bin/bash
+
 COMPOSE := docker compose
 SERVICE := imapsync
 SECRETS := password_corporativo_junta password_geducaand
 
 .DEFAULT_GOAL := help
 .PHONY: help install check-config up down restart build test sync-once logs status shell clean
+
+# Pide una contrasena por prompt y la escribe en el fichero, sin eco en
+# pantalla y sin pasar por la linea de comandos (printf es builtin, asi que
+# no aparece en 'ps'). El fichero se crea con permisos 600 antes de escribir.
+#   $(1) = fichero destino    $(2) = descripcion para el prompt
+define pedir_secreto
+	@if [ -s "$(1)" ]; then \
+		read -rp "  $(1) ya tiene contenido. Sobrescribir? [s/N] " resp; \
+		if [ "$$resp" != "s" ]; then echo "    se conserva la actual"; exit 0; fi; \
+	fi; \
+	if [ ! -t 0 ]; then \
+		echo "  ! sin terminal interactiva: $(1) queda vacio"; \
+		[ -f "$(1)" ] || install -m 600 /dev/null "$(1)"; \
+		exit 0; \
+	fi; \
+	read -rsp "  Contrasena — $(2): " clave; echo ""; \
+	if [ -z "$$clave" ]; then \
+		echo "    vacia: no se escribe nada, puedes rellenarla luego"; \
+		[ -f "$(1)" ] || install -m 600 /dev/null "$(1)"; \
+	else \
+		install -m 600 /dev/null "$(1)"; \
+		printf '%s' "$$clave" > "$(1)"; \
+		echo "  + $(1) guardada ($${#clave} caracteres)"; \
+	fi
+endef
 
 help: ## Muestra esta ayuda
 	@echo "geducand-imapsync — comandos disponibles:"
@@ -17,27 +45,23 @@ help: ## Muestra esta ayuda
 	@echo ""
 	@echo "Primera vez:  make install  →  editar .env y los ficheros de contrasena  →  make test  →  make up"
 
-install: ## Crea .env y los ficheros de contrasena (no sobrescribe)
+install: ## Crea .env y pide las contrasenas por prompt
 	@if [ -f .env ]; then \
 		echo "  = .env ya existe, no se toca"; \
 	else \
 		cp .env.example .env; \
 		echo "  + .env creado desde .env.example"; \
 	fi
-	@for s in $(SECRETS); do \
-		if [ -f $$s ]; then \
-			echo "  = $$s ya existe, no se toca"; \
-		else \
-			install -m 600 /dev/null $$s; \
-			echo "  + $$s creado (vacio, permisos 600)"; \
-		fi; \
-	done
 	@echo ""
-	@echo "Siguiente paso: edita .env y escribe las contrasenas en:"
-	@for s in $(SECRETS); do echo "  - $$s"; done
+	@echo "Contrasenas (no se muestran al escribirlas; Enter deja el fichero vacio):"
+	$(call pedir_secreto,password_corporativo_junta,buzon corporativo de la Junta)
+	$(call pedir_secreto,password_geducaand,App Password de Google para g.educaand.es)
 	@echo ""
-	@echo "Recuerda que password_geducaand debe ser una App Password de Google"
-	@echo "(requiere 2FA): https://myaccount.google.com/apppasswords"
+	@echo "Los ficheros de contrasena estan en .gitignore: nunca se suben al repositorio."
+	@echo "password_geducaand debe ser una App Password (requiere 2FA):"
+	@echo "  https://myaccount.google.com/apppasswords"
+	@echo ""
+	@echo "Siguiente paso: revisa SOURCE_USER y DEST_USER en .env, y lanza 'make test'."
 
 # Interno: no lleva '##' para no aparecer en 'make help'.
 check-config:

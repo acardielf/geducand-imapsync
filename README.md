@@ -38,21 +38,18 @@ make test
 make up
 ```
 
-1. `make install` crea `.env` y los dos ficheros de contraseña.
+1. `make install` crea `.env` y **te pide las dos contraseñas por pantalla**, que
+   guarda en sus ficheros con permisos `600`. No se muestran al teclearlas.
 2. En `.env` sólo hace falta poner `SOURCE_USER` y `DEST_USER`; el resto de valores
    traen defaults razonables.
 3. `make test` ejecuta un ciclo en simulación: no toca ningún buzón.
 4. `make up` arranca en segundo plano.
 
-Además de editar `.env`, escribe las dos contraseñas:
-
-```bash
-printf '%s' 'CONTRASEÑA_JUNTA' > password_corporativo_junta
-printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
-```
-
-🔑 La segunda **no** es la contraseña normal de Google, sino una App Password de 16
-caracteres: cómo obtenerla está en [Cómo generar `password_geducaand`](#cómo-generar-password_geducaand).
+🔑 La contraseña de Google **no** es la normal de la cuenta, sino una App Password de
+16 caracteres: cómo obtenerla está en
+[Cómo generar `password_geducaand`](#cómo-generar-password_geducaand). Si aún no la
+tienes, pulsa Enter en el prompt y rellénala más tarde volviendo a lanzar
+`make install`.
 
 A partir de ahí, `make logs` para ver qué está haciendo y `make down` para pararlo.
 
@@ -159,12 +156,17 @@ Sin estas dos el contenedor se detiene al arrancar con un mensaje explícito:
 Las contraseñas no van en `.env`: se pasan como *Docker secrets* y se leen desde
 `/run/secrets/password_corporativo_junta` y `/run/secrets/password_geducaand`.
 
-`make install` crea ambos ficheros vacíos con permisos `600`; sólo hay que escribir
-la contraseña dentro, sin salto de línea final:
+`make install` pide ambas por pantalla y las guarda con permisos `600`, sin eco al
+teclearlas y sin salto de línea final. Si un fichero ya tiene contenido, pregunta
+antes de sobrescribirlo, así que puedes relanzarlo para cambiar sólo una de las dos.
+
+Al no haber terminal interactiva (por ejemplo en un script), no se bloquea: crea los
+ficheros vacíos y sigue. Para rellenarlos a mano:
 
 ```bash
 printf '%s' 'CONTRASEÑA_JUNTA' > password_corporativo_junta
 printf '%s' 'APP_PASSWORD_GOOGLE' > password_geducaand
+chmod 600 password_corporativo_junta password_geducaand
 ```
 
 | Fichero | Contenido |
@@ -196,15 +198,15 @@ la opción no aparecerá aunque actives la verificación en dos pasos en tu cuen
 La gestión se hace con `make`. Ejecuta `make` sin argumentos para ver la lista
 completa de comandos.
 
-`make install` es idempotente: si `.env` o los ficheros de contraseña ya existen,
-los deja intactos.
+`make install` se puede relanzar sin miedo: no toca `.env` si ya existe, y pregunta
+antes de sobrescribir una contraseña ya guardada.
 
 ### Comandos
 
 | Comando | Qué hace |
 |---|---|
 | `make help` | Lista los comandos disponibles (opción por defecto) |
-| `make install` | Crea `.env` y los ficheros de contraseña sin sobrescribir |
+| `make install` | Crea `.env` y pide las contraseñas por pantalla |
 | `make up` | Construye y levanta el contenedor en segundo plano |
 | `make down` | Para y elimina el contenedor |
 | `make restart` | Reinicia el contenedor |
