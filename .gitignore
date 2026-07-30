@@ -6,6 +6,10 @@ credentials*
 *.pem
 *.key
 
+# Docker secrets (ver docker-compose.yml)
+password_corporativo_junta
+password_geducaand
+
 # Logs y estado de imapsync
 *.log
 logs/

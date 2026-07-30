@@ -1,0 +1,18 @@
+services:
+  imapsync:
+    build: .
+    container_name: imapsync
+    restart: always
+    volumes:
+      - ./logs:/var/log/imapsync
+    secrets:
+      - password_corporativo_junta
+      - password_geducaand
+    environment:
+      - TZ=Europe/Madrid
+
+secrets:
+  password_corporativo_junta:
+    file: ./password_corporativo_junta
+  password_geducaand:
+    file: ./password_geducaand
